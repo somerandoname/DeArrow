@@ -171,7 +171,7 @@ export const TitleComponent = (props: TitleComponentProps) => {
                             }
                         }
                     }}>
-                    <DownvoteIcon selected={downvoted} locked={ Config.config!.vip && props.submission.locked }/>
+                    <DownvoteIcon selected={downvoted} locked={props.submission.locked}/>
                 </button>
             </div>
 

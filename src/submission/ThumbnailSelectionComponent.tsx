@@ -166,7 +166,7 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                             }
                                         }
                                     }}>
-                                    <DownvoteIcon selected={downvoted} locked={ Config.config!.vip && props.locked }/>
+                                    <DownvoteIcon selected={downvoted} locked={props.locked}/>
                                 </button> : null
                             }
 
