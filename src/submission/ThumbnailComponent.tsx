@@ -22,6 +22,7 @@ export interface ThumbnailComponentProps {
     time?: number;
     children?: React.ReactNode;
     larger?: boolean;
+    style?: React.CSSProperties;
 }
 
 const defaultThumbnailOptions = [
@@ -118,6 +119,7 @@ export const ThumbnailComponent = (props: ThumbnailComponentProps) => {
 
     return (
         <div className={`cbThumbnail${props.selected ? " cbThumbnailSelected" : ""}`}
+                style={props.style}
                 onClick={() => {
                     let submitted = false;
                     const submit = () => {

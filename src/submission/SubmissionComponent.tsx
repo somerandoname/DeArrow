@@ -105,7 +105,8 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
                 title: originalTitle,
                 original: true,
                 votable: true,
-                locked: props.submissions.titles.some((s) => s.title === originalTitle && s.locked)
+                locked: props.submissions.titles.some((s) => s.title === originalTitle && s.locked),
+                userID: props.submissions.titles.find((s) => s.title === originalTitle)?.userID
             }, {
                 title: "",
                 original: false,
@@ -117,7 +118,8 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
                 title: s.title,
                 original: s.original,
                 votable: true,
-                locked: s.locked
+                locked: s.locked,
+                userID: s.userID
             }))];
 
             setTitles(newTitles);
@@ -132,7 +134,8 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
     const defaultThumbnails: RenderedThumbnailSubmission[] = [{
         type: ThumbnailType.Original,
         votable: true,
-        locked: props.submissions.thumbnails.some((s) => s.original && s.locked)
+        locked: props.submissions.thumbnails.some((s) => s.original && s.locked),
+        userID: props.submissions.thumbnails.find((s) => s.original)?.userID
     }];
     if (!isLiveSync(props.videoID)) {
         defaultThumbnails.push({
@@ -148,7 +151,8 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
         timestamp: s.timestamp,
         type: ThumbnailType.SpecifiedTime,
         votable: true,
-        locked: s.locked
+        locked: s.locked,
+        userID: s.userID
     }));
     const thumbnails = defaultThumbnails.concat(downloadedThumbnails);
 

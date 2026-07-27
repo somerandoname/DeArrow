@@ -21,6 +21,7 @@ import { fetchVideoMetadata, isLiveSync } from "../maze-utils/src/metadataFetche
 import { getCurrentPageTitle } from "../maze-utils/src/elements";
 import { formatJSErrorMessage, getLongErrorMessage } from "../maze-utils/src/formating";
 import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "./utils/lockedDownvotes";
+import { isUserSuppressed } from "./utils/suppressedUsers";
 
 interface VideoBrandingCacheRecord extends BrandingResult {
     lastUsed: number;
@@ -55,7 +56,7 @@ export async function getVideoThumbnailIncludingUnsubmitted(videoID: VideoID, br
     }
 
     const brandingData = await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation);
-    const result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)));
+    const result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID));
     if (!result) {
         if (returnRandomTime) {
             const timestamp = await getTimestampFromRandomTime(videoID, brandingData, brandingLocation);
@@ -155,7 +156,7 @@ export async function getVideoTitleIncludingUnsubmitted(videoID: VideoID, brandi
     }
 
     const result = (await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation))
-        ?.titles?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)));
+        ?.titles?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID));
     if (!result) {
         return null;
     } else {
@@ -172,7 +173,9 @@ export async function getVideoBranding(videoID: VideoID, queryByHash: boolean, w
     const cachedValue = cache[videoID];
 
     if (cachedValue && (!waitForFullReply || cachedValue.fullReply)) {
-        return cachedValue;
+        if (!cachedValue.fullReply || cachedValue.titles.length === 0 || cachedValue.titles.some(t => t.userID !== undefined)) {
+            return cachedValue;
+        }
     }
 
     if (Config.config!.thumbnailCacheUse === ThumbnailCacheOption.Disable) {
@@ -192,6 +195,10 @@ export async function getVideoBranding(videoID: VideoID, queryByHash: boolean, w
 
         const handleResults = (results: Record<VideoID, BrandingResult>, fullReply: boolean) => {
             for (const [key, result] of Object.entries(results)) {
+                if (cache[key]?.fullReply && !fullReply) {
+                    continue;
+                }
+
                 if (result.titles.length > 0) {
                     result.titles.forEach((title) => title.title = title.title.replace(/‹/ug, "<"));
                 }
@@ -321,7 +328,8 @@ async function fetchBranding(queryByHash: boolean, videoID: VideoID): Promise<Re
     try {
         if (queryByHash) {
             const request = await sendRequestToServer("GET", `/api/branding/${(await getHash(videoID, 1)).slice(0, 4)}`, {
-                fetchAll: true
+                fetchAll: true,
+                returnUserID: true
             });
 
             if (request.ok || request.status === 404) {
@@ -344,7 +352,8 @@ async function fetchBranding(queryByHash: boolean, videoID: VideoID): Promise<Re
         } else {
             const request = await sendRequestToServer("GET", "/api/branding", {
                 videoID,
-                fetchAll: true
+                fetchAll: true,
+                returnUserID: true
             });
 
             if (request.ok || request.status === 404) {

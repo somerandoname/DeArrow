@@ -142,6 +142,7 @@ interface SBConfig {
     lastGuidelinesConfirmation: number;
     openMenuKey: Keybind;
     enableExtensionKey: Keybind;
+    suppressedUserIDs: string[];
 }
 
 export interface DownvotedLockedSubmissions {
@@ -257,7 +258,8 @@ const syncDefaults = {
     confirmGuidelinesCount: 0,
     lastGuidelinesConfirmation: 0,
     openMenuKey: { key: "d", shift: true },
-    enableExtensionKey: { key: "e", ctrl: true, shift: true, alt: true }
+    enableExtensionKey: { key: "e", ctrl: true, shift: true, alt: true },
+    suppressedUserIDs: []
 };
 
 const localDefaults = {

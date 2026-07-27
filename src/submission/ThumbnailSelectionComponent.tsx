@@ -16,6 +16,8 @@ import TrashIcon from "../svgIcons/trashIcon";
 import { isLockedThumbnailDownvoted, removeLockedThumbnailDownvote, toggleLockedThumbnailDownvote } from "../utils/lockedDownvotes";
 import { updateBrandingForVideo } from "../videoBranding/videoBranding";
 import { logError } from "../utils/logger";
+import BlockIcon from "../svgIcons/blockIcon";
+import { isUserSuppressed, toggleUserSuppression, unsuppressUser } from "../utils/suppressedUsers";
 
 export interface ThumbnailSelectionComponentProps {
     video: HTMLVideoElement;
@@ -33,6 +35,7 @@ export interface ThumbnailSelectionComponentProps {
     votable?: boolean;
     submission?: ThumbnailSubmission;
     locked?: boolean;
+    userID?: string;
     actAsVip?: boolean;
 }
 
@@ -42,6 +45,11 @@ export interface ThumbnailSelectionComponentProps {
 export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentProps) => {
     const [error, setError] = React.useState("");
     const [downvoted, setDownvoted] = React.useState(false);
+    const [userSuppressed, setUserSuppressed] = React.useState(isUserSuppressed(props.userID));
+
+    React.useEffect(() => {
+        setUserSuppressed(isUserSuppressed(props.userID));
+    }, [props.userID, Config.config?.suppressedUserIDs]);
 
     function createThumbnailSubmission(): ThumbnailSubmission | null {
         return props.type === ThumbnailType.Original ? {
@@ -69,6 +77,7 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                 videoID={props.videoID}
                 time={props.time}
                 larger={props.larger}
+                style={{ opacity: userSuppressed ? 0.5 : undefined }}
                 onError={(e) => setError(e)}
                 onClick={props.onClick}>
 
@@ -196,6 +205,20 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                         }
                                     }}>
                                     <DownvoteIcon selected={downvoted} locked={props.locked}/>
+                                </button> : null
+                            }
+
+                            {
+                                props.userID ?
+                                <button className="cbButton"
+                                    title={chrome.i18n.getMessage(userSuppressed ? "unsuppressUser" : "suppressUser") || (userSuppressed ? "Unblock submitter globally" : "Block submitter globally")}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const nowSuppressed = toggleUserSuppression(props.userID!);
+                                        setUserSuppressed(nowSuppressed);
+                                        updateBrandingForVideo(props.videoID).catch(logError);
+                                    }}>
+                                    <BlockIcon selected={userSuppressed} />
                                 </button> : null
                             }
 

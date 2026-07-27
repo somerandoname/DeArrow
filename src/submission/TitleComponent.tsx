@@ -12,6 +12,8 @@ import { showAutoWarningIfRequired } from "./autoWarning";
 import { isLockedTitleDownvoted, removeLockedTitleDownvote, toggleLockedTitleDownvote } from "../utils/lockedDownvotes";
 import { updateBrandingForVideo } from "../videoBranding/videoBranding";
 import { logError } from "../utils/logger";
+import BlockIcon from "../svgIcons/blockIcon";
+import { isUserSuppressed, toggleUserSuppression, unsuppressUser } from "../utils/suppressedUsers";
 
 export interface TitleComponentProps {
     submission: RenderedTitleSubmission;
@@ -32,6 +34,11 @@ export const TitleComponent = (props: TitleComponentProps) => {
     const [titleChanged, setTitleChanged] = React.useState(false);
     const [focused, setFocused] = React.useState(false);
     const [downvoted, setDownvoted] = React.useState(false);
+    const [userSuppressed, setUserSuppressed] = React.useState(isUserSuppressed(props.submission.userID));
+
+    React.useEffect(() => {
+        setUserSuppressed(isUserSuppressed(props.submission.userID));
+    }, [props.submission.userID, Config.config?.suppressedUserIDs]);
 
     React.useEffect(() => {
         if (props.submission.locked) {
@@ -53,6 +60,7 @@ export const TitleComponent = (props: TitleComponentProps) => {
     const showTitleHint = !focused && title.current === "";
     return (
         <div className={`cbTitle${props.selected ? " cbTitleSelected" : ""}`}
+                style={{ opacity: userSuppressed ? 0.5 : undefined }}
                 onClick={() => {
                     const title = titleRef.current!.innerText;
                     props.onSelectOrUpdate(title.trim(), title.trim());
@@ -198,6 +206,20 @@ export const TitleComponent = (props: TitleComponentProps) => {
                     }}>
                     <DownvoteIcon selected={downvoted} locked={props.submission.locked}/>
                 </button>
+
+                {
+                    props.submission.userID ?
+                    <button className="cbButton"
+                        title={chrome.i18n.getMessage(userSuppressed ? "unsuppressUser" : "suppressUser") || (userSuppressed ? "Unblock submitter globally" : "Block submitter globally")}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            const nowSuppressed = toggleUserSuppression(props.submission.userID!);
+                            setUserSuppressed(nowSuppressed);
+                            updateBrandingForVideo(props.videoID).catch(logError);
+                        }}>
+                        <BlockIcon selected={userSuppressed} />
+                    </button> : null
+                }
             </div>
 
             <button className="resetCustomTitle cbButton" 

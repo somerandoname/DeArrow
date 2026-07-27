@@ -9,4 +9,5 @@ export interface TitleResult extends TitleSubmission {
     votes: number;
     locked: boolean;
     UUID: BrandingUUID;
+    userID?: string;
 }

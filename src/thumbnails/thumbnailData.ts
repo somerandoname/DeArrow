@@ -6,6 +6,7 @@ interface PartialThumbnailResult {
     votes: number;
     locked: boolean;
     UUID: BrandingUUID;
+    userID?: string;
 }
 
 export type CustomThumbnailSubmission = {

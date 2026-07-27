@@ -9,6 +9,7 @@ import { RenderedTitleSubmission } from "./TitleDrawerComponent";
 import { TitleFormatting } from "../config/config";
 import { FormattedText } from "../popup/FormattedTextComponent";
 import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "../utils/lockedDownvotes";
+import { isUserSuppressed } from "../utils/suppressedUsers";
 
 export interface BrandingPreviewComponentComponentProps {
     submissions: BrandingResult;
@@ -87,7 +88,7 @@ export const  BrandingPreviewComponent = (props: BrandingPreviewComponentCompone
 };
 
 function getDefaultTitle(submissions: BrandingResult, titles: RenderedTitleSubmission[], videoID: VideoID): RenderedTitleSubmission {
-    const validTitles = submissions.titles.filter(t => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)));
+    const validTitles = submissions.titles.filter(t => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID));
     if (validTitles.length > 0) {
         const bestTitle = validTitles.sort((a, b) => b.votes - a.votes)
             .sort((a, b) => +b.locked - +a.locked)[0];
@@ -99,7 +100,7 @@ function getDefaultTitle(submissions: BrandingResult, titles: RenderedTitleSubmi
 }
 
 function getDefaultThumbnail(submissions: BrandingResult, thumbnails: RenderedThumbnailSubmission[], videoID: VideoID): RenderedThumbnailSubmission {
-    const validThumbnails = submissions.thumbnails.filter(t => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)));
+    const validThumbnails = submissions.thumbnails.filter(t => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID));
     if (validThumbnails.length > 0) {
         const best = validThumbnails.sort((a, b) => b.votes - a.votes)
             .sort((a, b) => +b.locked - +a.locked)[0];

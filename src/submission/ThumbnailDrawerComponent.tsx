@@ -29,6 +29,7 @@ export type RenderedThumbnailSubmission = (NoTimeRenderedThumbnailSubmission | T
     votable: boolean;
     locked: boolean;
     isUnsubmitted?: boolean;
+    userID?: string;
 };
 
 export const ThumbnailDrawerComponent = (props: ThumbnailDrawerComponentProps) => {
@@ -68,6 +69,7 @@ function getThumbnails(props: ThumbnailDrawerComponentProps,
                 time={time}
                 votable={submission.votable}
                 locked={submission.locked}
+                userID={submission.userID}
                 actAsVip={props.actAsVip}
                 key={time ? `T${time}` : `I${i}`}
             ></ThumbnailSelectionComponent>
