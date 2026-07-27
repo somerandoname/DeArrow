@@ -1,4 +1,6 @@
 import * as React from "react";
+import { removeThumbnailTimestampFromCache } from "../thumbnails/thumbnailDataCache";
+
 import { CustomThumbnailResult, ThumbnailSubmission } from "../thumbnails/thumbnailData";
 import { TitleSubmission } from "../titles/titleData";
 import { BrandingResult } from "../videoBranding/videoBranding";
@@ -281,6 +283,27 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
                     }}
                     onUpvote={(index) => {
                         setUpvotedThumbnailIndex(index);
+                    }}
+                    onRemove={(timestamp, index) => {
+                        removeThumbnailTimestampFromCache(props.videoID, timestamp);
+                        const unsubmitted = Config.local!.unsubmitted[props.videoID];
+                        if (unsubmitted) {
+                            const idx = unsubmitted.thumbnails.findIndex((s) => !s.original && s.timestamp === timestamp);
+                            if (idx !== -1) {
+                                unsubmitted.thumbnails.splice(idx, 1);
+                                if (unsubmitted.titles.length === 0 && unsubmitted.thumbnails.length === 0) {
+                                    delete Config.local!.unsubmitted[props.videoID];
+                                }
+                            }
+                        }
+
+                        if (selectedThumbnailIndex === index) {
+                            setSelectedThumbnailIndex(-1);
+                            selectedThumbnail.current = null;
+                        }
+
+                        updateUnsubmitted(Config.local!.unsubmitted[props.videoID], setExtraUnsubmittedThumbnails, null, thumbnails, titles);
+                        Config.forceLocalUpdate("unsubmitted");
                     }}></ThumbnailDrawerComponent>
             </div>
 
@@ -471,7 +494,8 @@ function updateUnsubmitted(unsubmitted: UnsubmittedSubmission,
                 type: ThumbnailType.SpecifiedTime,
                 timestamp: (t as CustomThumbnailResult).timestamp,
                 votable: false,
-                locked: false
+                locked: false,
+                isUnsubmitted: true
             }));
 
             setExtraUnsubmittedThumbnails(thumbnailsResult);

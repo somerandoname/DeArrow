@@ -12,12 +12,16 @@ import Config, { ThumbnailFallbackOption } from "../config/config";
 import { FormattedText } from "../popup/FormattedTextComponent";
 import { shouldStoreVotes } from "../utils/configUtils";
 
+import TrashIcon from "../svgIcons/trashIcon";
+
 export interface ThumbnailSelectionComponentProps {
     video: HTMLVideoElement;
     selected?: boolean;
     upvoted?: boolean;
     onClick?: (thumbnail: ThumbnailSubmission) => void;
     onUpvote?: () => void;
+    onRemove?: () => void;
+    isUnsubmitted?: boolean;
     type: ThumbnailType;
     videoID: VideoID;
     hideTime?: boolean;
@@ -79,86 +83,104 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                     {
                         props.type !== ThumbnailType.CurrentTime ?
                         <div className="cbVoteButtons"
-                                style={{ visibility: !props.selected && props.votable ? undefined : "hidden" }}>
-                            <button className="cbButton" 
-                                title={chrome.i18n.getMessage("upvote")}
-                                onClick={(e) => {
-                                    e.stopPropagation();
+                                style={{ visibility: props.onRemove || (!props.selected && props.votable) ? undefined : "hidden" }}>
+                            {
+                                props.votable ?
+                                <button className="cbButton" 
+                                    title={chrome.i18n.getMessage("upvote")}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
 
-                                    const submission = createThumbnailSubmission();
-                                    if (submission?.original 
-                                        && !Config.config!.vip
-                                        && !Config.config!.firstThumbnailSubmitted
-                                        && Config.config!.thumbnailFallback === ThumbnailFallbackOption.RandomTime
-                                        && !confirm(chrome.i18n.getMessage("areYouSureOriginalVote"))) return;
+                                        const submission = createThumbnailSubmission();
+                                        if (submission?.original 
+                                            && !Config.config!.vip
+                                            && !Config.config!.firstThumbnailSubmitted
+                                            && Config.config!.thumbnailFallback === ThumbnailFallbackOption.RandomTime
+                                            && !confirm(chrome.i18n.getMessage("areYouSureOriginalVote"))) return;
 
-                                    const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
-                                    submitVideoBrandingAndHandleErrors(null, submission, false, props.actAsVip!).then(() => {
-                                        stopAnimation();
-                                        setDownvoted(false);
+                                        const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
+                                        submitVideoBrandingAndHandleErrors(null, submission, false, props.actAsVip!).then(() => {
+                                            stopAnimation();
+                                            setDownvoted(false);
 
-                                        props.onUpvote?.();
-                                    });
+                                            props.onUpvote?.();
+                                        });
 
-                                    if (shouldStoreVotes()) {
-                                        const unsubmitted = Config.local!.unsubmitted[props.videoID] ??= {
-                                            thumbnails: [],
-                                            titles: []
-                                        };
-                                        unsubmitted.thumbnails.forEach((t) => t.selected = false);
-    
-                                        const unsubmittedThumbnail = unsubmitted.thumbnails.find((t) =>(t.original && props.type === ThumbnailType.Original)
-                                            || (!t.original && t.timestamp === props.time));
-                                        if (unsubmittedThumbnail) {
-                                            unsubmittedThumbnail.selected = true;
-                                        } else {
-                                            if (props.type === ThumbnailType.Original) {
-                                                unsubmitted.thumbnails.push({
-                                                    original: true,
-                                                    selected: true
-                                                });
+                                        if (shouldStoreVotes()) {
+                                            const unsubmitted = Config.local!.unsubmitted[props.videoID] ??= {
+                                                thumbnails: [],
+                                                titles: []
+                                            };
+                                            unsubmitted.thumbnails.forEach((t) => t.selected = false);
+        
+                                            const unsubmittedThumbnail = unsubmitted.thumbnails.find((t) =>(t.original && props.type === ThumbnailType.Original)
+                                                || (!t.original && t.timestamp === props.time));
+                                            if (unsubmittedThumbnail) {
+                                                unsubmittedThumbnail.selected = true;
                                             } else {
-                                                unsubmitted.thumbnails.push({
-                                                    original: false,
-                                                    timestamp: props.time!,
-                                                    selected: true
-                                                });
+                                                if (props.type === ThumbnailType.Original) {
+                                                    unsubmitted.thumbnails.push({
+                                                        original: true,
+                                                        selected: true
+                                                    });
+                                                } else {
+                                                    unsubmitted.thumbnails.push({
+                                                        original: false,
+                                                        timestamp: props.time!,
+                                                        selected: true
+                                                    });
+                                                }
                                             }
-                                        }
-    
-                                        Config.forceLocalUpdate("unsubmitted");
-                                    }
-                                }}>
-                                <UpvoteIcon selected={props.upvoted}/>
-                            </button>
-
-                            <button className="cbButton" 
-                                title={chrome.i18n.getMessage("downvote")}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-
-                                    const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
-                                    submitVideoBrandingAndHandleErrors(null, createThumbnailSubmission(), true, props.actAsVip!).then(() => {
-                                        stopAnimation();
-                                        setDownvoted(true);
-                                    });
-
-                                    const unsubmitted = Config.local!.unsubmitted[props.videoID];
-                                    if (unsubmitted) {
-                                        const unsubmittedThumbnail = unsubmitted.thumbnails.find((t) => !t.original && t.timestamp === props.time);
-                                        if (unsubmittedThumbnail) {
-                                            unsubmitted.thumbnails.splice(unsubmitted.thumbnails.indexOf(unsubmittedThumbnail), 1);
-
-                                            if (unsubmitted.titles.length === 0 && unsubmitted.thumbnails.length === 0) {
-                                                delete Config.local!.unsubmitted[props.videoID];
-                                            }
-
+        
                                             Config.forceLocalUpdate("unsubmitted");
                                         }
-                                    }
-                                }}>
-                                <DownvoteIcon selected={downvoted} locked={ Config.config!.vip && props.locked }/>
-                            </button>
+                                    }}>
+                                    <UpvoteIcon selected={props.upvoted}/>
+                                </button> : null
+                            }
+
+                            {
+                                props.votable ?
+                                <button className="cbButton" 
+                                    title={chrome.i18n.getMessage("downvote")}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+
+                                        const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
+                                        submitVideoBrandingAndHandleErrors(null, createThumbnailSubmission(), true, props.actAsVip!).then(() => {
+                                            stopAnimation();
+                                            setDownvoted(true);
+                                        });
+
+                                        const unsubmitted = Config.local!.unsubmitted[props.videoID];
+                                        if (unsubmitted) {
+                                            const unsubmittedThumbnail = unsubmitted.thumbnails.find((t) => !t.original && t.timestamp === props.time);
+                                            if (unsubmittedThumbnail) {
+                                                unsubmitted.thumbnails.splice(unsubmitted.thumbnails.indexOf(unsubmittedThumbnail), 1);
+
+                                                if (unsubmitted.titles.length === 0 && unsubmitted.thumbnails.length === 0) {
+                                                    delete Config.local!.unsubmitted[props.videoID];
+                                                }
+
+                                                Config.forceLocalUpdate("unsubmitted");
+                                            }
+                                        }
+                                    }}>
+                                    <DownvoteIcon selected={downvoted} locked={ Config.config!.vip && props.locked }/>
+                                </button> : null
+                            }
+
+                            {
+                                props.onRemove ?
+                                <button className="cbButton cbRemoveButton"
+                                    title={chrome.i18n.getMessage("remove") || "Remove from local cache"}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        props.onRemove?.();
+                                    }}>
+                                    <TrashIcon />
+                                </button> : null
+                            }
                         </div>
                         : null
                     }

@@ -43,6 +43,19 @@ export const thumbnailDataCache = new DataCache<VideoID, ThumbnailData>(() => ({
     }
 }, 1000);
 
+export function removeThumbnailTimestampFromCache(videoID: VideoID, timestamp: number): void {
+    const cacheData = thumbnailDataCache.getFromCache(videoID);
+    if (cacheData && cacheData.video) {
+        const matches = cacheData.video.filter(v => v.timestamp === timestamp || v.timestamp?.toFixed(3) === timestamp?.toFixed(3));
+        for (const item of matches) {
+            if (item.rendered && item.blobUrl) {
+                URL.revokeObjectURL(item.blobUrl);
+            }
+        }
+        cacheData.video = cacheData.video.filter(v => !(v.timestamp === timestamp || v.timestamp?.toFixed(3) === timestamp?.toFixed(3)));
+    }
+}
+
 export interface ChannelData {
     avatarUrl: string | null;
 }

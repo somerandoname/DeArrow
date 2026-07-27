@@ -12,6 +12,7 @@ export interface ThumbnailDrawerComponentProps {
     upvotedThumbnailIndex: number;
     onSelect: (submission: ThumbnailSubmission, index: number) => void;
     onUpvote: (index: number) => void;
+    onRemove?: (timestamp: number, index: number) => void;
     actAsVip: boolean;
 }
 
@@ -27,6 +28,7 @@ interface TimeRenderedThumbnailSubmission {
 export type RenderedThumbnailSubmission = (NoTimeRenderedThumbnailSubmission | TimeRenderedThumbnailSubmission) & {
     votable: boolean;
     locked: boolean;
+    isUnsubmitted?: boolean;
 };
 
 export const ThumbnailDrawerComponent = (props: ThumbnailDrawerComponentProps) => {
@@ -42,8 +44,9 @@ function getThumbnails(props: ThumbnailDrawerComponentProps,
     const thumbnails: JSX.Element[] = [];
     const renderCount = props.existingSubmissions.length;
     for (let i = 0; i < renderCount; i++) {
-        const time = props.existingSubmissions[i].type === ThumbnailType.SpecifiedTime ? 
-            (props.existingSubmissions[i] as TimeRenderedThumbnailSubmission).timestamp : undefined;
+        const submission = props.existingSubmissions[i];
+        const time = submission.type === ThumbnailType.SpecifiedTime ? 
+            (submission as TimeRenderedThumbnailSubmission).timestamp : undefined;
 
         thumbnails.push(
             <ThumbnailSelectionComponent
@@ -56,11 +59,15 @@ function getThumbnails(props: ThumbnailDrawerComponentProps,
                 onUpvote={() => {
                     props.onUpvote(i);
                 }}
-                type={props.existingSubmissions[i].type}
+                onRemove={time != null && submission.isUnsubmitted ? () => {
+                    props.onRemove?.(time, i);
+                } : undefined}
+                isUnsubmitted={submission.isUnsubmitted}
+                type={submission.type}
                 videoID={props.videoId}
                 time={time}
-                votable={props.existingSubmissions[i].votable}
-                locked={props.existingSubmissions[i].locked}
+                votable={submission.votable}
+                locked={submission.locked}
                 actAsVip={props.actAsVip}
                 key={time ? `T${time}` : `I${i}`}
             ></ThumbnailSelectionComponent>
