@@ -123,7 +123,7 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
             const unsubmitted = Config.local!.unsubmitted[props.videoID];
             updateUnsubmitted(unsubmitted, setExtraUnsubmittedThumbnails, setExtraUnsubmittedTitles, thumbnails, newTitles);
         })();
-    }, []);
+    }, [props.submissions]);
 
     const [actAsVip, setActAsVip] = React.useState(Config.config!.actAsVip);
 

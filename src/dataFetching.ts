@@ -258,13 +258,11 @@ export async function getVideoBranding(videoID: VideoID, queryByHash: boolean, w
                     };
                 }
 
-                if (thumbnailCacheFetchDone) {
-                    if (videoID === getVideoID()) {
-                        updateSubmitButton(results[videoID]);
-                    }
-
-                    updateBrandingForVideo(videoID).catch(logError);
+                if (videoID === getVideoID() && results[videoID]) {
+                    updateSubmitButton(results[videoID]);
                 }
+
+                updateBrandingForVideo(videoID).catch(logError);
             }
         }).catch(logError);
 
@@ -273,7 +271,7 @@ export async function getVideoBranding(videoID: VideoID, queryByHash: boolean, w
                 if (await getThumbnailFallbackOption(videoID) === ThumbnailFallbackOption.RandomTime && !mainFetchDone) {
                     thumbnailCacheFetchDone = true;
 
-                    handleResults(results, true);
+                    handleResults(results, false);
                 }
             }
         }).catch(logError);
