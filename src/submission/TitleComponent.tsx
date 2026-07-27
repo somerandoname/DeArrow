@@ -9,6 +9,9 @@ import { AnimationUtils } from "../../maze-utils/src/animationUtils";
 import { VideoID } from "../../maze-utils/src/video";
 import { shouldStoreVotes } from "../utils/configUtils";
 import { showAutoWarningIfRequired } from "./autoWarning";
+import { isLockedTitleDownvoted, removeLockedTitleDownvote, toggleLockedTitleDownvote } from "../utils/lockedDownvotes";
+import { updateBrandingForVideo } from "../videoBranding/videoBranding";
+import { logError } from "../utils/logger";
 
 export interface TitleComponentProps {
     submission: RenderedTitleSubmission;
@@ -29,6 +32,12 @@ export const TitleComponent = (props: TitleComponentProps) => {
     const [titleChanged, setTitleChanged] = React.useState(false);
     const [focused, setFocused] = React.useState(false);
     const [downvoted, setDownvoted] = React.useState(false);
+
+    React.useEffect(() => {
+        if (props.submission.locked) {
+            setDownvoted(isLockedTitleDownvoted(props.videoID, props.submission.title));
+        }
+    }, [props.videoID, props.submission.title, props.submission.locked]);
 
     React.useEffect(() => {
         if (focused && title.current === "") {
@@ -115,6 +124,15 @@ export const TitleComponent = (props: TitleComponentProps) => {
                     onClick={(e) => {
                         e.stopPropagation();
 
+                        if (props.submission.locked) {
+                            if (isLockedTitleDownvoted(props.videoID, props.submission.title)) {
+                                removeLockedTitleDownvote(props.videoID, props.submission.title);
+                                setDownvoted(false);
+                                updateBrandingForVideo(props.videoID).catch(logError);
+                            }
+                            return;
+                        }
+
                         const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
                         submitVideoBrandingAndHandleErrors(props.submission, null, false, props.actAsVip).then(() => {
                             stopAnimation();
@@ -150,6 +168,13 @@ export const TitleComponent = (props: TitleComponentProps) => {
                     title={chrome.i18n.getMessage("downvote")}
                     onClick={(e) => {
                         e.stopPropagation();
+
+                        if (props.submission.locked) {
+                            const nowDownvoted = toggleLockedTitleDownvote(props.videoID, props.submission.title);
+                            setDownvoted(nowDownvoted);
+                            updateBrandingForVideo(props.videoID).catch(logError);
+                            return;
+                        }
 
                         const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
                         submitVideoBrandingAndHandleErrors(props.submission, null, true, props.actAsVip).then(() => {

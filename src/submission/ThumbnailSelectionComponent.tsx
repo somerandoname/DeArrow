@@ -13,6 +13,9 @@ import { FormattedText } from "../popup/FormattedTextComponent";
 import { shouldStoreVotes } from "../utils/configUtils";
 
 import TrashIcon from "../svgIcons/trashIcon";
+import { isLockedThumbnailDownvoted, removeLockedThumbnailDownvote, toggleLockedThumbnailDownvote } from "../utils/lockedDownvotes";
+import { updateBrandingForVideo } from "../videoBranding/videoBranding";
+import { logError } from "../utils/logger";
 
 export interface ThumbnailSelectionComponentProps {
     video: HTMLVideoElement;
@@ -48,6 +51,15 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
             timestamp: props.time!
         };
     }
+
+    React.useEffect(() => {
+        if (props.locked) {
+            const submission = createThumbnailSubmission();
+            if (submission) {
+                setDownvoted(isLockedThumbnailDownvoted(props.videoID, submission));
+            }
+        }
+    }, [props.videoID, props.time, props.type, props.locked]);
 
     return (
         <ThumbnailComponent
@@ -92,6 +104,15 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                         e.stopPropagation();
 
                                         const submission = createThumbnailSubmission();
+                                        if (props.locked && submission) {
+                                            if (isLockedThumbnailDownvoted(props.videoID, submission)) {
+                                                removeLockedThumbnailDownvote(props.videoID, submission);
+                                                setDownvoted(false);
+                                                updateBrandingForVideo(props.videoID).catch(logError);
+                                            }
+                                            return;
+                                        }
+
                                         if (submission?.original 
                                             && !Config.config!.vip
                                             && !Config.config!.firstThumbnailSubmitted
@@ -145,6 +166,14 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                     title={chrome.i18n.getMessage("downvote")}
                                     onClick={(e) => {
                                         e.stopPropagation();
+
+                                        const submission = createThumbnailSubmission();
+                                        if (props.locked && submission) {
+                                            const nowDownvoted = toggleLockedThumbnailDownvote(props.videoID, submission);
+                                            setDownvoted(nowDownvoted);
+                                            updateBrandingForVideo(props.videoID).catch(logError);
+                                            return;
+                                        }
 
                                         const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
                                         submitVideoBrandingAndHandleErrors(null, createThumbnailSubmission(), true, props.actAsVip!).then(() => {

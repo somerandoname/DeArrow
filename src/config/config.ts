@@ -144,9 +144,15 @@ interface SBConfig {
     enableExtensionKey: Keybind;
 }
 
+export interface DownvotedLockedSubmissions {
+    titles?: string[];
+    thumbnails?: Array<{ original?: boolean; timestamp?: number }>;
+}
+
 interface SBStorage {
     navigationApiAvailable: boolean;
     unsubmitted: Record<VideoID, UnsubmittedSubmission>;
+    downvotedLocked: Record<VideoID, DownvotedLockedSubmissions>;
 }
 
 class ConfigClass extends ProtoConfig<SBConfig, SBStorage> {
@@ -256,7 +262,8 @@ const syncDefaults = {
 
 const localDefaults = {
     navigationApiAvailable: false,
-    unsubmitted: {}
+    unsubmitted: {},
+    downvotedLocked: {}
 };
 
 const Config = new ConfigClass(syncDefaults, localDefaults, migrateOldSyncFormats, true);

@@ -8,6 +8,7 @@ import { ThumbnailSelectionComponent } from "./ThumbnailSelectionComponent";
 import { RenderedTitleSubmission } from "./TitleDrawerComponent";
 import { TitleFormatting } from "../config/config";
 import { FormattedText } from "../popup/FormattedTextComponent";
+import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "../utils/lockedDownvotes";
 
 export interface BrandingPreviewComponentComponentProps {
     submissions: BrandingResult;
@@ -24,25 +25,25 @@ export interface BrandingPreviewComponentComponentProps {
 export const  BrandingPreviewComponent = (props: BrandingPreviewComponentComponentProps) => {
     const [sentenceCaseTitle, setSentenceCaseTitle] = React.useState("");
     const [titleCaseTitle, setTitleCaseTitle] = React.useState("");
-    const [displayedThumbnail, setDisplayedThumbnail] = React.useState(getDefaultThumbnail(props.submissions, props.thumbnails));
+    const [displayedThumbnail, setDisplayedThumbnail] = React.useState(getDefaultThumbnail(props.submissions, props.thumbnails, props.videoID));
 
     React.useEffect(() => {
         (async () => {
-            const title = props.selectedTitle?.title || getDefaultTitle(props.submissions, props.titles)?.title;
+            const title = props.selectedTitle?.title || getDefaultTitle(props.submissions, props.titles, props.videoID)?.title;
             if (title) {
                 setSentenceCaseTitle(await formatTitleInternal(title, true, TitleFormatting.SentenceCase, false));
                 setTitleCaseTitle(await formatTitleInternal(title, true, TitleFormatting.TitleCase, false));
             }
         })();
-    }, [props.selectedTitle, props.submissions, props.titles]);
+    }, [props.selectedTitle, props.submissions, props.titles, props.videoID]);
 
     React.useEffect(() => {
         if (props.selectedThumbnail) {
             setDisplayedThumbnail(props.selectedThumbnail);
         } else {
-            setDisplayedThumbnail(getDefaultThumbnail(props.submissions, props.thumbnails));
+            setDisplayedThumbnail(getDefaultThumbnail(props.submissions, props.thumbnails, props.videoID));
         }
-    }, [props.selectedThumbnail]);
+    }, [props.selectedThumbnail, props.submissions, props.thumbnails, props.videoID]);
 
     return (
         <div className="cbBrandingPreview">
@@ -85,9 +86,10 @@ export const  BrandingPreviewComponent = (props: BrandingPreviewComponentCompone
     );
 };
 
-function getDefaultTitle(submissions: BrandingResult, titles: RenderedTitleSubmission[]): RenderedTitleSubmission {
-    if (submissions.titles.some((t) => t.votes >= 0)) {
-        const bestTitle = submissions.titles.sort((a, b) => b.votes - a.votes)
+function getDefaultTitle(submissions: BrandingResult, titles: RenderedTitleSubmission[], videoID: VideoID): RenderedTitleSubmission {
+    const validTitles = submissions.titles.filter(t => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)));
+    if (validTitles.length > 0) {
+        const bestTitle = validTitles.sort((a, b) => b.votes - a.votes)
             .sort((a, b) => +b.locked - +a.locked)[0];
 
         return titles.find((t) => t.title === bestTitle?.title) ?? titles[0];
@@ -96,9 +98,10 @@ function getDefaultTitle(submissions: BrandingResult, titles: RenderedTitleSubmi
     }
 }
 
-function getDefaultThumbnail(submissions: BrandingResult, thumbnails: RenderedThumbnailSubmission[]): RenderedThumbnailSubmission {
-    if (submissions.thumbnails.some((t) => t.votes >= 0)) {
-        const best = submissions.thumbnails.sort((a, b) => b.votes - a.votes)
+function getDefaultThumbnail(submissions: BrandingResult, thumbnails: RenderedThumbnailSubmission[], videoID: VideoID): RenderedThumbnailSubmission {
+    const validThumbnails = submissions.thumbnails.filter(t => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)));
+    if (validThumbnails.length > 0) {
+        const best = validThumbnails.sort((a, b) => b.votes - a.votes)
             .sort((a, b) => +b.locked - +a.locked)[0];
 
         if (!best.original) {

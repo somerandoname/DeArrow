@@ -20,6 +20,7 @@ import { getAutoWarning } from "./submission/autoWarning";
 import { fetchVideoMetadata, isLiveSync } from "../maze-utils/src/metadataFetcher";
 import { getCurrentPageTitle } from "../maze-utils/src/elements";
 import { formatJSErrorMessage, getLongErrorMessage } from "../maze-utils/src/formating";
+import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "./utils/lockedDownvotes";
 
 interface VideoBrandingCacheRecord extends BrandingResult {
     lastUsed: number;
@@ -54,8 +55,8 @@ export async function getVideoThumbnailIncludingUnsubmitted(videoID: VideoID, br
     }
 
     const brandingData = await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation);
-    const result = brandingData?.thumbnails[0];
-    if (!result || (!result.locked && result.votes < 0)) {
+    const result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)));
+    if (!result) {
         if (returnRandomTime) {
             const timestamp = await getTimestampFromRandomTime(videoID, brandingData, brandingLocation);
 
@@ -153,8 +154,9 @@ export async function getVideoTitleIncludingUnsubmitted(videoID: VideoID, brandi
         };
     }
 
-    const result = (await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation))?.titles[0];
-    if (!result || (!result.locked && result.votes < 0)) {
+    const result = (await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation))
+        ?.titles?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)));
+    if (!result) {
         return null;
     } else {
         return result;
