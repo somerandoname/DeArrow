@@ -440,7 +440,7 @@ export async function createThumbnailImageElement(existingElement: HTMLImageElem
 }
 
 export function drawCenteredToCanvas(canvas: HTMLCanvasElement, width: number, height: number,
-    originalWidth: number, originalHeight: number, originalSurface: HTMLVideoElement | HTMLCanvasElement | ImageBitmap): void {
+    originalWidth: number, originalHeight: number, originalSurface: HTMLVideoElement | HTMLCanvasElement | ImageBitmap | HTMLImageElement): void {
     const calculateWidth = height * originalWidth / originalHeight;
     const context = canvas.getContext("2d")!;
     

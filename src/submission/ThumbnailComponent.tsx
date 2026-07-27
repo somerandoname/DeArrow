@@ -87,11 +87,19 @@ export const ThumbnailComponent = (props: ThumbnailComponentProps) => {
                     renderThumbnail(props.videoID, canvasWidth, canvasHeight, false, props.time!, false, true).then((rendered) => {
                         waitFor(() => canvasRef?.current).then(async () => {
                             if (rendered && !cancelled) {
-                                const blob = await new Response(rendered.blobUrl).blob();
-                                const imageBitmap = await createImageBitmap(blob);
-
-                                drawCenteredToCanvas(canvasRef.current!, canvasRef.current!.width, canvasRef.current!.height,
-                                    imageBitmap.width, imageBitmap.height, imageBitmap);
+                                const img = new Image();
+                                img.onload = () => {
+                                    if (canvasRef.current && !cancelled) {
+                                        drawCenteredToCanvas(canvasRef.current, canvasRef.current.width, canvasRef.current.height,
+                                            img.naturalWidth, img.naturalHeight, img);
+                                    } else {
+                                        props.onError(chrome.i18n.getMessage("CanvasMissing"));
+                                    }
+                                };
+                                img.onerror = () => {
+                                    props.onError(chrome.i18n.getMessage("FailedToRender"));
+                                };
+                                img.src = rendered.blobUrl;
                             } else {
                                 props.onError(chrome.i18n.getMessage("FailedToRender"));
                             }
@@ -206,8 +214,8 @@ async function renderCurrentFrame(props: ThumbnailComponentProps,
                 renderCurrentFrame(props, canvasRef, inRenderingLoop, true, cacheThumbnail);
             };
 
-            if (props.video.requestVideoFrameCallback) {
-                props.video.requestVideoFrameCallback(nextLoop);
+            if ("requestVideoFrameCallback" in props.video) {
+                (props.video as HTMLVideoElement & { requestVideoFrameCallback: (callback: () => void) => void }).requestVideoFrameCallback(nextLoop);
             } else {
                 setTimeout(nextLoop, 1000);
             }

@@ -395,7 +395,7 @@ async function fetchBrandingFromThumbnailCache(videoID: VideoID, time?: number, 
 
                     setupPreRenderedThumbnail(videoID, timestamp, 
                         URL.createObjectURL((request.responseBinary instanceof Blob) ? 
-                            request.responseBinary : new Blob([new Uint8Array(request.responseBinary).buffer])));
+                            request.responseBinary : new Blob([new Uint8Array(request.responseBinary)], { type: "image/webp" })));
                     delete activeThumbnailCacheRequests[videoID];
 
                     return {
