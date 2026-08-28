@@ -7,7 +7,6 @@ import { ThumbnailSubmission } from "../thumbnails/thumbnailData";
 import { queueThumbnailCacheRequest, submitVideoBrandingAndHandleErrors } from "../dataFetching";
 import Config from "../config/config";
 import { shouldStoreVotes } from "../utils/configUtils";
-import { closeGuidelineChecklist, confirmGuidelines } from "./SubmissionChecklist";
 import { TitleButton } from "./titleButton";
 import { sendRequestToServer } from "../utils/requests";
 
@@ -31,8 +30,6 @@ export class SubmitButton extends TitleButton {
     }
 
     close(): void {
-        closeGuidelineChecklist();
-
         super.close();
     }
 
@@ -81,9 +78,6 @@ export class SubmitButton extends TitleButton {
             return false;
         }
 
-        if (!await confirmGuidelines(title)) {
-            return false;
-        }
 
         if (!await submitVideoBrandingAndHandleErrors(title, thumbnail, false, actAsVip)) {
             return false;

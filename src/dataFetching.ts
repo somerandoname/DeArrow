@@ -16,7 +16,6 @@ import { getThumbnailFallbackOption, getThumbnailFallbackOptionFastCheck, should
 import { updateSubmitButton } from "./video";
 import { sendRequestToServer } from "./utils/requests";
 import { thumbnailDataCache } from "./thumbnails/thumbnailDataCache";
-import { getAutoWarning } from "./submission/autoWarning";
 import { fetchVideoMetadata, isLiveSync } from "../maze-utils/src/metadataFetcher";
 import { getCurrentPageTitle } from "../maze-utils/src/elements";
 import { formatJSErrorMessage, getLongErrorMessage } from "../maze-utils/src/formating";
@@ -646,7 +645,7 @@ export async function submitVideoBranding(videoID: VideoID, title: TitleSubmissi
         Config.config!.firstThumbnailSubmitted = true;
     }
 
-    const wasWarned = !!title && !!getAutoWarning(title.title, getCurrentPageTitle() || "");
+    const wasWarned = false;
 
     const result = await sendRequestToServer("POST", "/api/branding", {
         userID: Config.config!.userID,

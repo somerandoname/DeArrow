@@ -4,7 +4,6 @@ import { getVideoID, getYouTubeVideoID } from "../../maze-utils/src/video";
 import { logError } from "../utils/logger";
 import { submitVideoCasualVote } from "../dataFetching";
 import Config from "../config/config";
-import { closeGuidelineChecklist } from "./SubmissionChecklist";
 import { TitleButton } from "./titleButton";
 import { CasualVoteComponent } from "./CasualVoteComponent";
 import { CasualVoteOnboardingComponent } from "./CasualVoteOnboardingComponent";
@@ -35,8 +34,6 @@ export class CasualVoteButton extends TitleButton {
     }
 
     close(): void {
-        closeGuidelineChecklist();
-
         super.close();
         this.updateIcon();
     }

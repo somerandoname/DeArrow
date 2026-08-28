@@ -249,7 +249,7 @@ ytd-compact-playlist-renderer .ytd-compact-playlist-renderer #video-title:not(.c
     display: none;
 }
 
-.cbTitlePreview:not(.cbSubmissionChecklist .cbTitlePreview) {
+.cbTitlePreview {
     transform: rotate(180deg);
 }
 
@@ -588,13 +588,6 @@ ytd-compact-playlist-renderer .ytd-compact-playlist-renderer #video-title:not(.c
     padding-top: 5px;
 }
 
-.cbCheckAllMessage {
-    text-align: center;
-}
-
-.cbSubmissionChecklist .cbVoteButtonContainer {
-    margin-bottom: 5px;
-}
 
 @keyframes fadeIn {
 	from { opacity: 0; }

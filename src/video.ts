@@ -9,7 +9,6 @@ import * as documentScript from "../dist/js/document.js";
 import { listenForBadges, listenForMiniPlayerTitleChange, listenForTitleChange } from "./utils/titleBar";
 import { replaceVideoPlayerSuggestionsBranding, setupMobileAutoplayHandler } from "./videoBranding/watchPageBrandingHandler";
 import { onMobile } from "../maze-utils/src/pageInfo";
-import { resetShownWarnings } from "./submission/autoWarning";
 import { getAntiTranslatedTitle } from "./titles/titleAntiTranslateData";
 import { CasualVoteButton } from "./submission/casualVoteButton";
 import { fetchOembed, getChannelNameFromVideo, getPlaybackFormats, getUcidFromVideo } from "../maze-utils/src/metadataFetcher";
@@ -62,8 +61,6 @@ function resetValues() {
     casualVoteButton.close();
 
     clearVideoBrandingInstances();
-
-    resetShownWarnings();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars

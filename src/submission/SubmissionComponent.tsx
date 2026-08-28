@@ -26,7 +26,6 @@ import { Tooltip } from "../utils/tooltip";
 import { LicenseComponent } from "../license/LicenseComponent";
 import { ToggleOptionComponent } from "../popup/ToggleOptionComponent";
 import { FormattedText } from "../popup/FormattedTextComponent";
-import { isAutoWarningShown } from "./autoWarning";
 import { getAntiTranslatedTitle } from "../titles/titleAntiTranslateData";
 import { isLiveSync } from "../../maze-utils/src/metadataFetcher";
 import { getCurrentPageTitle } from "../../maze-utils/src/elements";
@@ -392,11 +391,6 @@ export const SubmissionComponent = (props: SubmissionComponentProps) => {
                                 || (!selectedThumbnail.current && !selectedTitle) 
                                 || (!!selectedTitle && selectedTitle.title.toLowerCase() === chrome.i18n.getMessage("OriginalTitle").toLowerCase())}
                     onClick={async () => {
-                        if (isAutoWarningShown()) {
-                            alert(chrome.i18n.getMessage("resolveWarningFirst"));
-                            return;
-                        }
-
                         setCurrentlySubmitting(true);
 
                         props.submitClicked(selectedTitle ? {
