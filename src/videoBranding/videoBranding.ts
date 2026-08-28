@@ -72,7 +72,33 @@ const casualLogo = chrome.runtime.getURL("icons/logo-casual.svg");
 
 const videoBrandingInstances: Record<VideoID, VideoBrandingInstance> = {}
 
-export async function replaceCurrentVideoBranding(): Promise<[boolean, boolean]> {
+let replaceCurrentVideoBrandingTimer: ReturnType<typeof setTimeout> | null = null;
+let replaceCurrentVideoBrandingResolvers: Array<(value: [boolean, boolean]) => void> = [];
+
+export function replaceCurrentVideoBranding(): Promise<[boolean, boolean]> {
+    return new Promise<[boolean, boolean]>((resolve) => {
+        replaceCurrentVideoBrandingResolvers.push(resolve);
+
+        if (replaceCurrentVideoBrandingTimer !== null) {
+            clearTimeout(replaceCurrentVideoBrandingTimer);
+        }
+
+        replaceCurrentVideoBrandingTimer = setTimeout(() => {
+            replaceCurrentVideoBrandingTimer = null;
+            const resolvers = replaceCurrentVideoBrandingResolvers;
+            replaceCurrentVideoBrandingResolvers = [];
+
+            replaceCurrentVideoBrandingImpl().then((result) => {
+                for (const r of resolvers) r(result);
+            }).catch((e) => {
+                logError(e);
+                for (const r of resolvers) r([false, false]);
+            });
+        }, 100);
+    });
+}
+
+async function replaceCurrentVideoBrandingImpl(): Promise<[boolean, boolean]> {
     const onClipPage = document.URL.includes("/clip/");
     const onWatchPage = document.URL.includes("/watch") || onClipPage;
     const onChannelPage = isOnChannelPage();

@@ -49,12 +49,19 @@ export async function replaceTitle(element: HTMLElement, videoID: VideoID, showC
         }
     }
 
-    if (Config.config!.hideDetailsWhileFetching) {
-        hideCustomTitle(element, brandingLocation);
-        hideOriginalTitle(element, brandingLocation);
-    } else {
-        showOriginalTitle(element, brandingLocation);
-        hideCustomTitle(element, brandingLocation);
+    // Skip hiding if a custom title is already visible for this video (e.g. during refresh after voting).
+    // This prevents the title from flickering blank while new data is fetched.
+    const existingCustomTitle = element.querySelector(".cbCustomTitle") as HTMLElement | null;
+    const customTitleAlreadyVisible = existingCustomTitle && existingCustomTitle.style.display !== "none"
+        && existingCustomTitle.textContent;
+    if (!customTitleAlreadyVisible) {
+        if (Config.config!.hideDetailsWhileFetching) {
+            hideCustomTitle(element, brandingLocation);
+            hideOriginalTitle(element, brandingLocation);
+        } else {
+            showOriginalTitle(element, brandingLocation);
+            hideCustomTitle(element, brandingLocation);
+        }
     }
 
     try {

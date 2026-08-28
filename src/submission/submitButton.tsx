@@ -1,8 +1,7 @@
 import * as React from "react";
-import { BrandingResult, replaceCurrentVideoBranding } from "../videoBranding/videoBranding";
+import { BrandingResult } from "../videoBranding/videoBranding";
 import { SubmissionComponent } from "./SubmissionComponent";
 import { getVideo, getVideoID, getYouTubeVideoID, isCurrentTimeWrong } from "../../maze-utils/src/video";
-import { logError } from "../utils/logger";
 import { TitleSubmission } from "../titles/titleData";
 import { ThumbnailSubmission } from "../thumbnails/thumbnailData";
 import { queueThumbnailCacheRequest, submitVideoBrandingAndHandleErrors } from "../dataFetching";
@@ -176,7 +175,7 @@ export class SubmitButton extends TitleButton {
 
         Config.forceLocalUpdate("unsubmitted");
 
-        setTimeout(() => replaceCurrentVideoBranding().catch(logError), 1100);
+
 
         return true;
     }

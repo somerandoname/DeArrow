@@ -532,6 +532,113 @@ export function clearCache(videoID: VideoID) {
     delete cache[videoID];
 }
 
+/**
+ * Schedule a background re-fetch that will reconcile the optimistic cache
+ * with the actual server state. Uses a short delay to ensure the immediate
+ * optimistic read completes first.
+ */
+function scheduleBackgroundRefetch(videoID: VideoID): void {
+    setTimeout(() => {
+        delete cache[videoID];
+        delete activeRequests[videoID];
+
+        getVideoBranding(videoID, true, true).then(() => {
+            updateBrandingForVideo(videoID).catch(logError);
+        }).catch(logError);
+    }, 500);
+}
+
+/**
+ * Optimistically update the cache after a branding vote so that
+ * subsequent reads return instantly without a network round-trip.
+ * A background re-fetch will reconcile the cache with the server later.
+ */
+function optimisticBrandingCacheUpdate(videoID: VideoID, title: TitleSubmission | null,
+        thumbnail: ThumbnailSubmission | null, downvote: boolean): void {
+    const existing = cache[videoID];
+    if (!existing) {
+        // No cache to update optimistically; the next fetch will populate it
+        return;
+    }
+
+    if (title) {
+        if (downvote) {
+            // Downvoting: decrement votes on the matching title
+            for (const t of existing.titles) {
+                if (t.title === title.title) {
+                    t.votes--;
+                    break;
+                }
+            }
+        } else {
+            // Submitting a new title: add it to the front with 1 vote
+            existing.titles.unshift({
+                title: title.title,
+                original: title.original,
+                votes: 1,
+                locked: false,
+                UUID: generateUserID() as BrandingUUID,
+            });
+        }
+    }
+
+    if (thumbnail) {
+        if (downvote) {
+            // Downvoting: decrement votes on the matching thumbnail
+            for (const t of existing.thumbnails) {
+                if (thumbnail.original && t.original) {
+                    t.votes--;
+                    break;
+                } else if (!thumbnail.original && !t.original && t.timestamp === thumbnail.timestamp) {
+                    t.votes--;
+                    break;
+                }
+            }
+        } else {
+            // Submitting a new thumbnail
+            if (thumbnail.original) {
+                existing.thumbnails.unshift({
+                    original: true,
+                    votes: 1,
+                    locked: false,
+                    UUID: generateUserID() as BrandingUUID,
+                });
+            } else {
+                existing.thumbnails.unshift({
+                    original: false,
+                    timestamp: thumbnail.timestamp,
+                    votes: 1,
+                    locked: false,
+                    UUID: generateUserID() as BrandingUUID,
+                });
+            }
+        }
+    }
+
+    existing.lastUsed = Date.now();
+    scheduleBackgroundRefetch(videoID);
+}
+
+/**
+ * Optimistically update the cache after a casual vote.
+ */
+function optimisticCasualCacheUpdate(videoID: VideoID, categories: string[], downvote: boolean): void {
+    const existing = cache[videoID];
+    if (!existing) return;
+
+    for (const category of categories) {
+        const existingVote = existing.casualVotes.find((v) => v.id === category);
+        if (existingVote) {
+            existingVote.count += downvote ? -1 : 1;
+        } else if (!downvote) {
+            existing.casualVotes.push({ id: category, count: 1 });
+        }
+    }
+
+    existing.lastUsed = Date.now();
+    scheduleBackgroundRefetch(videoID);
+}
+
 export async function submitVideoBranding(videoID: VideoID, title: TitleSubmission | null,
         thumbnail: ThumbnailSubmission | null, downvote = false, actAsVip = false): Promise<FetchResponse> {
 
@@ -554,7 +661,7 @@ export async function submitVideoBranding(videoID: VideoID, title: TitleSubmissi
         userAgent: extensionUserAgent(),
     });
 
-    clearCache(videoID);
+    optimisticBrandingCacheUpdate(videoID, title, thumbnail, downvote);
     return result;
 }
 
@@ -568,9 +675,10 @@ export async function submitVideoCasualVote(videoID: VideoID, categories: string
         userAgent: extensionUserAgent(),
     });
 
-    clearCache(videoID);
+    optimisticCasualCacheUpdate(videoID, categories, downvote);
     return result;
 }
+
 
 /**
  * Also does alerts

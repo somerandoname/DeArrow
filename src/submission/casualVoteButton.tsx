@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CasualVoteInfo, replaceCurrentVideoBranding } from "../videoBranding/videoBranding";
+import { CasualVoteInfo } from "../videoBranding/videoBranding";
 import { getVideoID, getYouTubeVideoID } from "../../maze-utils/src/video";
 import { logError } from "../utils/logger";
 import { submitVideoCasualVote } from "../dataFetching";
@@ -94,7 +94,7 @@ export class CasualVoteButton extends TitleButton {
                 Config.forceLocalUpdate("unsubmitted");
             }
 
-            setTimeout(() => replaceCurrentVideoBranding().catch(logError), 1100);
+
 
             return true;
         } else {
