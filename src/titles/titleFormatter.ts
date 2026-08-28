@@ -23,20 +23,20 @@ if (LOAD_CLD) {
  * https://util.unicode.org/UnicodeJsps/character.jsp
  */
 
-export async function formatTitle(title: string, isCustom: boolean, videoID: VideoID | null): Promise<string> {
-    return formatTitleInternal(title, isCustom, await getTitleFormatting(videoID), await shouldCleanEmojis(videoID), Config.config!.formatCustomTitles, Config.config!.formatOriginalTitles);
+export async function formatTitle(title: string, isCustom: boolean, videoID: VideoID | null, isOwnSubmission = false): Promise<string> {
+    return formatTitleInternal(title, isCustom, await getTitleFormatting(videoID), await shouldCleanEmojis(videoID), Config.config!.formatCustomTitles, Config.config!.formatOriginalTitles, isOwnSubmission);
 }
 
-export async function formatTitleDefaultSettings(title: string, isCustom: boolean): Promise<string> {
-    return await formatTitleInternal(title, isCustom, Config.config!.titleFormatting, Config.config!.shouldCleanEmojis, Config.config!.formatCustomTitles, Config.config!.formatOriginalTitles);
+export async function formatTitleDefaultSettings(title: string, isCustom: boolean, isOwnSubmission = false): Promise<string> {
+    return await formatTitleInternal(title, isCustom, Config.config!.titleFormatting, Config.config!.shouldCleanEmojis, Config.config!.formatCustomTitles, Config.config!.formatOriginalTitles, isOwnSubmission);
 }
 
-export async function formatTitleInternal(title: string, isCustom: boolean, titleFormatting: TitleFormatting, shouldCleanEmojis: boolean, formatCustomTitles = true, formatOriginalTitles = true): Promise<string> {
+export async function formatTitleInternal(title: string, isCustom: boolean, titleFormatting: TitleFormatting, shouldCleanEmojis: boolean, formatCustomTitles = true, formatOriginalTitles = true, isOwnSubmission = false): Promise<string> {
     if (shouldCleanEmojis) {
         title = cleanFancyText(cleanEmojis(title));
     }
 
-    if ((!formatCustomTitles && isCustom) || (!formatOriginalTitles && !isCustom)) {
+    if ((!formatCustomTitles && isCustom) || (!formatOriginalTitles && !isCustom) || (isCustom && isOwnSubmission)) {
         titleFormatting = TitleFormatting.Disable;
     }
 

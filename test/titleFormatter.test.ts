@@ -369,3 +369,23 @@ describe("cleanFancyText", () => {
         });
     }
 });
+
+describe("formatTitleInternal Own Submission Exemption", () => {
+    it("should format custom titles when isOwnSubmission is false", async () => {
+        const input = "This Is A Submitted Title";
+        const result = await formatTitleInternal(input, true, TitleFormatting.SentenceCase, false, true, true, false);
+        expect(result).toBe("This is a submitted title");
+    });
+
+    it("should exempt own custom submissions from being formatted", async () => {
+        const input = "This Is My Own Submitted Title";
+        const result = await formatTitleInternal(input, true, TitleFormatting.SentenceCase, false, true, true, true);
+        expect(result).toBe("This Is My Own Submitted Title");
+    });
+
+    it("should clean emojis even for own submissions if shouldCleanEmojis is true", async () => {
+        const input = "This Is My Own Submitted Title 🔥";
+        const result = await formatTitleInternal(input, true, TitleFormatting.SentenceCase, true, true, true, true);
+        expect(result).toBe("This Is My Own Submitted Title");
+    });
+});

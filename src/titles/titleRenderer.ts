@@ -13,6 +13,7 @@ import { isFirefoxOrSafari, waitFor } from "../../maze-utils/src";
 import { isSafari } from "../../maze-utils/src/config";
 import { notificationToTitle, titleToNotificationFormat } from "../videoBranding/notificationHandler";
 import { getAntiTranslatedTitle } from "./titleAntiTranslateData";
+import { isOwnSubmission } from "../utils/userUtils";
 
 enum WatchPageType {
     Video,
@@ -90,7 +91,8 @@ export async function replaceTitle(element: HTMLElement, videoID: VideoID, showC
                     || await shouldCleanEmojis(videoID) || cleanEmojis(originalTitle.toLowerCase()) !== cleanEmojis(title.toLowerCase()))
                 && (!await shouldShowCasual(videoID, element, showCustomBranding, brandingLocation) 
                     || (originalTitle.toLowerCase() === title.toLowerCase() && await getTitleFormatting(videoID) !== TitleFormatting.Disable))) {
-            const formattedTitle = await formatTitle(title, true, videoID);
+            const isOwn = await isOwnSubmission(titleData?.userID);
+            const formattedTitle = await formatTitle(title, true, videoID, isOwn);
             if (!await isOnCorrectVideo(element, brandingLocation, videoID)) return false;
 
             if (getOriginalTitleText(originalTitleElement, brandingLocation) 

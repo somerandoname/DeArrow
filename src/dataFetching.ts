@@ -18,6 +18,7 @@ import { sendRequestToServer } from "./utils/requests";
 import { thumbnailDataCache } from "./thumbnails/thumbnailDataCache";
 import { fetchVideoMetadata, isLiveSync } from "../maze-utils/src/metadataFetcher";
 import { getCurrentPageTitle } from "../maze-utils/src/elements";
+import { getPublicUserID, getCachedPublicUserID } from "./utils/userUtils";
 import { formatJSErrorMessage, getLongErrorMessage } from "../maze-utils/src/formating";
 import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "./utils/lockedDownvotes";
 import { isUserSuppressed } from "./utils/suppressedUsers";
@@ -150,7 +151,8 @@ export async function getVideoTitleIncludingUnsubmitted(videoID: VideoID, brandi
             votes: 0,
             locked: false,
             UUID: generateUserID() as BrandingUUID,
-            original: false
+            original: false,
+            userID: (await getPublicUserID()) ?? undefined
         };
     }
 
@@ -577,6 +579,7 @@ function optimisticBrandingCacheUpdate(videoID: VideoID, title: TitleSubmission 
                 votes: 1,
                 locked: false,
                 UUID: generateUserID() as BrandingUUID,
+                userID: getCachedPublicUserID() ?? undefined,
             });
         }
     }
@@ -660,6 +663,7 @@ export async function submitVideoBranding(videoID: VideoID, title: TitleSubmissi
         userAgent: extensionUserAgent(),
     });
 
+    await getPublicUserID();
     optimisticBrandingCacheUpdate(videoID, title, thumbnail, downvote);
     return result;
 }
