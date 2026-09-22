@@ -12,6 +12,7 @@ import { getVideoCasualInfo, getVideoTitleIncludingUnsubmitted } from "../dataFe
 import { handleOnboarding } from "./onboarding";
 import { cleanEmojis, cleanResultingTitle } from "../titles/titleFormatter";
 import { getTitleFormatting, shouldDefaultToCustom, shouldDefaultToCustomFastCheck, shouldUseCrowdsourcedTitles } from "../config/channelOverrides";
+import { isOwnSubmission } from "../utils/userUtils";
 import { isOnV3Extension, onMobile } from "../../maze-utils/src/pageInfo";
 import { addMaxTitleLinesCssToPage } from "../utils/cssInjector";
 import { casualVoteButton, submitButton } from "../video";
@@ -608,7 +609,7 @@ async function hasCustomTitleWithOriginalTitle(videoID: VideoID, originalTitleEl
     const originalTitle = originalTitleElement?.textContent;
     const customTitle = title && !title.original 
         && (!originalTitle || (cleanResultingTitle(cleanEmojis(title.title))).toLowerCase() !== (cleanResultingTitle(cleanEmojis(originalTitle))).toLowerCase())
-        && await shouldUseCrowdsourcedTitles(videoID);
+        && (await shouldUseCrowdsourcedTitles(videoID) || title.isUnsubmitted || await isOwnSubmission(title.userID));
 
     return !!customTitle;
 }

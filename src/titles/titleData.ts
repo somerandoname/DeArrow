@@ -10,4 +10,5 @@ export interface TitleResult extends TitleSubmission {
     locked: boolean;
     UUID: BrandingUUID;
     userID?: string;
+    isUnsubmitted?: boolean;
 }

@@ -84,7 +84,7 @@ export async function replaceTitle(element: HTMLElement, videoID: VideoID, showC
 
         const title = titleData?.title;
         const originalTitle = getOriginalTitleText(originalTitleElement, brandingLocation).trim();
-        if (title && await shouldUseCrowdsourcedTitles(videoID)
+        if (title && (await shouldUseCrowdsourcedTitles(videoID) || titleData.isUnsubmitted || await isOwnSubmission(titleData.userID))
                 // If there are just formatting changes, and the user doesn't want those, don't replace
                 && (await getTitleFormatting(videoID) !== TitleFormatting.Disable || originalTitle.toLowerCase() !== title.toLowerCase())
                 && (await getTitleFormatting(videoID) !== TitleFormatting.Disable 

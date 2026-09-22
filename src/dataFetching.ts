@@ -1,5 +1,5 @@
 import { VideoID, getVideo, getVideoID, getYouTubeVideoID } from "../maze-utils/src/video";
-import { ThumbnailSubmission, ThumbnailWithRandomTimeResult } from "./thumbnails/thumbnailData";
+import { ThumbnailResult, ThumbnailSubmission, ThumbnailWithRandomTimeResult } from "./thumbnails/thumbnailData";
 import { TitleResult, TitleSubmission } from "./titles/titleData";
 import { FetchResponse, FetchResponseBinary, logRequest, sendBinaryRequestToCustomServer } from "../maze-utils/src/background-request-proxy";
 import { BrandingLocation, BrandingResult, CasualVoteInfo, replaceCurrentVideoBranding, updateBrandingForVideo } from "./videoBranding/videoBranding";
@@ -12,13 +12,13 @@ import { extensionUserAgent, objectToURI, timeoutPomise } from "../maze-utils/sr
 import { isCachedThumbnailLoaded, setupPreRenderedThumbnail, thumbnailCacheDownloaded } from "./thumbnails/thumbnailRenderer";
 import * as CompileConfig from "../config.json";
 import { alea } from "seedrandom";
-import { getThumbnailFallbackOption, getThumbnailFallbackOptionFastCheck, shouldReplaceThumbnails, shouldReplaceThumbnailsFastCheck } from "./config/channelOverrides";
+import { getThumbnailFallbackOption, getThumbnailFallbackOptionFastCheck, shouldReplaceThumbnails, shouldReplaceThumbnailsFastCheck, shouldUseCrowdsourcedTitles } from "./config/channelOverrides";
 import { updateSubmitButton } from "./video";
 import { sendRequestToServer } from "./utils/requests";
 import { thumbnailDataCache } from "./thumbnails/thumbnailDataCache";
 import { fetchVideoMetadata, isLiveSync } from "../maze-utils/src/metadataFetcher";
 import { getCurrentPageTitle } from "../maze-utils/src/elements";
-import { getPublicUserID, getCachedPublicUserID } from "./utils/userUtils";
+import { getPublicUserID, getCachedPublicUserID, isOwnSubmission } from "./utils/userUtils";
 import { formatJSErrorMessage, getLongErrorMessage } from "../maze-utils/src/formating";
 import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "./utils/lockedDownvotes";
 import { isUserSuppressed } from "./utils/suppressedUsers";
@@ -62,12 +62,27 @@ export async function getVideoThumbnailIncludingUnsubmitted(videoID: VideoID, br
             locked: false,
             UUID: generateUserID() as BrandingUUID,
             isRandomTime: false,
-            isUnsubmitted: true
+            isUnsubmitted: true,
+            userID: (await getPublicUserID()) ?? undefined
         };
     }
 
     const brandingData = await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation);
-    const result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID));
+    const useCrowdsourced = await shouldUseCrowdsourcedTitles(videoID);
+
+    let result: ThumbnailResult | undefined;
+    if (useCrowdsourced) {
+        result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID));
+    } else {
+        if (brandingData?.thumbnails) {
+            for (const t of brandingData.thumbnails) {
+                if (!(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID) && await isOwnSubmission(t.userID)) {
+                    result = t;
+                    break;
+                }
+            }
+        }
+    }
     if (!result) {
         if (returnRandomTime) {
             const timestamp = await getTimestampFromRandomTime(videoID, brandingData, brandingLocation);
@@ -163,12 +178,27 @@ export async function getVideoTitleIncludingUnsubmitted(videoID: VideoID, brandi
             locked: false,
             UUID: generateUserID() as BrandingUUID,
             original: false,
-            userID: (await getPublicUserID()) ?? undefined
+            userID: (await getPublicUserID()) ?? undefined,
+            isUnsubmitted: true
         };
     }
 
-    const result = (await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation))
-        ?.titles?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID));
+    const brandingData = await getVideoBranding(videoID, brandingLocation === BrandingLocation.Watch, false, brandingLocation);
+    const useCrowdsourced = await shouldUseCrowdsourcedTitles(videoID);
+
+    let result: TitleResult | undefined;
+    if (useCrowdsourced) {
+        result = brandingData?.titles?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID));
+    } else {
+        if (brandingData?.titles) {
+            for (const t of brandingData.titles) {
+                if (!(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID) && await isOwnSubmission(t.userID)) {
+                    result = t;
+                    break;
+                }
+            }
+        }
+    }
     if (!result) {
         return null;
     } else {
