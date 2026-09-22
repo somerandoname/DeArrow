@@ -6,7 +6,7 @@ import { getThumbnailImageSelector, replaceThumbnail } from "../thumbnails/thumb
 import { TitleResult } from "../titles/titleData";
 import { findOrCreateShowOriginalButton, getOrCreateTitleElement, getOriginalTitleElement, hideAndUpdateShowOriginalButton as hideAndUpdateShowOriginalButton, replaceTitle } from "../titles/titleRenderer";
 import { removeHandledThumbnail, setThumbnailListener } from "../../maze-utils/src/thumbnailManagement";
-import Config, { ThumbnailCacheOption, TitleFormatting } from "../config/config";
+import Config, { ThumbnailCacheOption, TitleFormatting, UnsubmittedSubmission } from "../config/config";
 import { logError } from "../utils/logger";
 import { getVideoCasualInfo, getVideoTitleIncludingUnsubmitted } from "../dataFetching";
 import { handleOnboarding } from "./onboarding";
@@ -581,6 +581,24 @@ export function setupOptionChangeListener(): void {
         if (changes.titleMaxLines 
                 && changes.titleMaxLines.newValue !== changes.titleMaxLines.oldValue) {
             addMaxTitleLinesCssToPage();
+        }
+    });
+
+    Config.configLocalListeners.push((changes) => {
+        if (changes["unsubmitted"]) {
+            const oldUnsubmitted = (changes["unsubmitted"].oldValue || {}) as Record<VideoID, UnsubmittedSubmission>;
+            const newUnsubmitted = (changes["unsubmitted"].newValue || {}) as Record<VideoID, UnsubmittedSubmission>;
+
+            const changedVideoIDs = new Set<VideoID>([
+                ...Object.keys(oldUnsubmitted) as VideoID[],
+                ...Object.keys(newUnsubmitted) as VideoID[]
+            ]);
+
+            for (const videoID of changedVideoIDs) {
+                if (videoBrandingInstances[videoID]) {
+                    updateBrandingForVideo(videoID).catch(logError);
+                }
+            }
         }
     });
 }

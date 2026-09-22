@@ -12,6 +12,7 @@ export interface Permission {
 
 export type UnsubmittedThumbnailSubmission = ThumbnailSubmission & {
     selected?: boolean;
+    dataUrl?: string;
 }
 
 export interface UnsubmittedTitleSubmission {

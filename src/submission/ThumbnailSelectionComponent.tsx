@@ -16,6 +16,7 @@ import TrashIcon from "../svgIcons/trashIcon";
 import { isLockedThumbnailDownvoted, removeLockedThumbnailDownvote, toggleLockedThumbnailDownvote } from "../utils/lockedDownvotes";
 import { updateBrandingForVideo } from "../videoBranding/videoBranding";
 import { logError } from "../utils/logger";
+import { setupPreRenderedThumbnail } from "../thumbnails/thumbnailRenderer";
 import BlockIcon from "../svgIcons/blockIcon";
 import { isUserSuppressed, toggleUserSuppression, unsuppressUser } from "../utils/suppressedUsers";
 
@@ -142,11 +143,27 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                                 titles: []
                                             };
                                             unsubmitted.thumbnails.forEach((t) => t.selected = false);
-        
+
+                                            let dataUrl: string | undefined = undefined;
+                                            if (props.type !== ThumbnailType.Original) {
+                                                const container = e.currentTarget.closest(".cbThumbnail") ?? e.currentTarget.closest(".cbThumbnailBox");
+                                                const canvas = container?.querySelector("canvas") as HTMLCanvasElement | null;
+                                                if (canvas && canvas.width > 0 && canvas.height > 0) {
+                                                    try {
+                                                        dataUrl = canvas.toDataURL("image/webp", 0.85);
+                                                    } catch (err) {
+                                                        logError(err);
+                                                    }
+                                                }
+                                            }
+
                                             const unsubmittedThumbnail = unsubmitted.thumbnails.find((t) =>(t.original && props.type === ThumbnailType.Original)
                                                 || (!t.original && t.timestamp === props.time));
                                             if (unsubmittedThumbnail) {
                                                 unsubmittedThumbnail.selected = true;
+                                                if (dataUrl) {
+                                                    unsubmittedThumbnail.dataUrl = dataUrl;
+                                                }
                                             } else {
                                                 if (props.type === ThumbnailType.Original) {
                                                     unsubmitted.thumbnails.push({
@@ -157,11 +174,16 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                                     unsubmitted.thumbnails.push({
                                                         original: false,
                                                         timestamp: props.time!,
-                                                        selected: true
+                                                        selected: true,
+                                                        dataUrl
                                                     });
                                                 }
                                             }
-        
+
+                                            if (dataUrl && props.time != null) {
+                                                setupPreRenderedThumbnail(props.videoID, props.time, dataUrl);
+                                            }
+
                                             Config.forceLocalUpdate("unsubmitted");
                                         }
                                     }}>

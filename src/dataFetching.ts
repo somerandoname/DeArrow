@@ -46,12 +46,23 @@ export async function getVideoThumbnailIncludingUnsubmitted(videoID: VideoID, br
         returnRandomTime = true): Promise<ThumbnailWithRandomTimeResult | null> {
     const unsubmitted = Config.local!.unsubmitted[videoID]?.thumbnails?.find(t => t.selected);
     if (unsubmitted) {
+        if (!unsubmitted.original && unsubmitted.timestamp != null) {
+            if (unsubmitted.dataUrl && !isCachedThumbnailLoaded(videoID, unsubmitted.timestamp)) {
+                setupPreRenderedThumbnail(videoID, unsubmitted.timestamp, unsubmitted.dataUrl);
+            }
+
+            if (!isCachedThumbnailLoaded(videoID, unsubmitted.timestamp) && !isFetchingFromThumbnailCache(videoID, unsubmitted.timestamp)) {
+                queueThumbnailCacheRequest(videoID, unsubmitted.timestamp, undefined, false, true);
+            }
+        }
+
         return {
             ...unsubmitted,
             votes: 0,
             locked: false,
             UUID: generateUserID() as BrandingUUID,
-            isRandomTime: false
+            isRandomTime: false,
+            isUnsubmitted: true
         };
     }
 

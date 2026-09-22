@@ -23,6 +23,7 @@ export type OriginalThumbnailResult = PartialThumbnailResult & OriginalThumbnail
 export type ThumbnailResult = CustomThumbnailResult | OriginalThumbnailResult;
 export type ThumbnailWithRandomTimeResult = ThumbnailResult & {
     isRandomTime: boolean;
+    isUnsubmitted?: boolean;
 };
 export type ThumbnailSubmission = CustomThumbnailSubmission | OriginalThumbnailSubmission;
 
