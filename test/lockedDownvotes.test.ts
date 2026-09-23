@@ -6,7 +6,13 @@ import {
     toggleLockedTitleDownvote,
     toggleLockedThumbnailDownvote,
     removeLockedTitleDownvote,
-    removeLockedThumbnailDownvote
+    removeLockedThumbnailDownvote,
+    isTitleDownvoted,
+    isThumbnailDownvoted,
+    addTitleDownvote,
+    addThumbnailDownvote,
+    removeTitleDownvote,
+    removeThumbnailDownvote
 } from "../src/utils/lockedDownvotes";
 
 (global as any).chrome = {
@@ -84,5 +90,35 @@ describe("Locked Downvotes Unit Tests", () => {
         removeLockedThumbnailDownvote(videoID, submission);
         expect(isLockedThumbnailDownvoted(videoID, submission)).toBe(false);
         expect(Config.local!.downvotedLocked[videoID]).toBeUndefined();
+    });
+
+    it("should add title downvote and detect via isTitleDownvoted", () => {
+        const title = "Unlocked Title To Downvote";
+        expect(isTitleDownvoted(videoID, title)).toBe(false);
+
+        addTitleDownvote(videoID, title);
+        expect(isTitleDownvoted(videoID, title)).toBe(true);
+
+        // Adding again should not duplicate
+        addTitleDownvote(videoID, title);
+        expect(Config.local!.downvotedLocked[videoID]?.titles?.length).toBe(1);
+
+        removeTitleDownvote(videoID, title);
+        expect(isTitleDownvoted(videoID, title)).toBe(false);
+    });
+
+    it("should add thumbnail downvote and detect via isThumbnailDownvoted", () => {
+        const submission = { original: false as const, timestamp: 45.67 };
+        expect(isThumbnailDownvoted(videoID, submission)).toBe(false);
+
+        addThumbnailDownvote(videoID, submission);
+        expect(isThumbnailDownvoted(videoID, submission)).toBe(true);
+
+        // Adding again should not duplicate
+        addThumbnailDownvote(videoID, submission);
+        expect(Config.local!.downvotedLocked[videoID]?.thumbnails?.length).toBe(1);
+
+        removeThumbnailDownvote(videoID, submission);
+        expect(isThumbnailDownvoted(videoID, submission)).toBe(false);
     });
 });

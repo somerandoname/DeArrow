@@ -8,7 +8,7 @@ import { submitVideoBrandingAndHandleErrors } from "../dataFetching";
 import { AnimationUtils } from "../../maze-utils/src/animationUtils";
 import { VideoID } from "../../maze-utils/src/video";
 import { shouldStoreVotes } from "../utils/configUtils";
-import { isLockedTitleDownvoted, removeLockedTitleDownvote, toggleLockedTitleDownvote } from "../utils/lockedDownvotes";
+import { isTitleDownvoted, addTitleDownvote, removeTitleDownvote, toggleLockedTitleDownvote } from "../utils/lockedDownvotes";
 import { updateBrandingForVideo } from "../videoBranding/videoBranding";
 import { logError } from "../utils/logger";
 import BlockIcon from "../svgIcons/blockIcon";
@@ -40,9 +40,7 @@ export const TitleComponent = (props: TitleComponentProps) => {
     }, [props.submission.userID, Config.config?.suppressedUserIDs]);
 
     React.useEffect(() => {
-        if (props.submission.locked) {
-            setDownvoted(isLockedTitleDownvoted(props.videoID, props.submission.title));
-        }
+        setDownvoted(isTitleDownvoted(props.videoID, props.submission.title));
     }, [props.videoID, props.submission.title, props.submission.locked]);
 
     React.useEffect(() => {
@@ -129,12 +127,14 @@ export const TitleComponent = (props: TitleComponentProps) => {
                     onClick={(e) => {
                         e.stopPropagation();
 
-                        if (props.submission.locked) {
-                            if (isLockedTitleDownvoted(props.videoID, props.submission.title)) {
-                                removeLockedTitleDownvote(props.videoID, props.submission.title);
-                                setDownvoted(false);
+                        if (isTitleDownvoted(props.videoID, props.submission.title)) {
+                            removeTitleDownvote(props.videoID, props.submission.title);
+                            setDownvoted(false);
+                            if (props.submission.locked) {
                                 updateBrandingForVideo(props.videoID).catch(logError);
+                                return;
                             }
+                        } else if (props.submission.locked) {
                             return;
                         }
 
@@ -181,10 +181,12 @@ export const TitleComponent = (props: TitleComponentProps) => {
                             return;
                         }
 
+                        addTitleDownvote(props.videoID, props.submission.title);
+                        setDownvoted(true);
+
                         const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
                         submitVideoBrandingAndHandleErrors(props.submission, null, true, props.actAsVip).then(() => {
                             stopAnimation();
-                            setDownvoted(true);
                         });
 
                         const unsubmitted = Config.local!.unsubmitted[props.videoID];

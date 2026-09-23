@@ -97,6 +97,39 @@ export function removeLockedThumbnailDownvote(videoID: VideoID, submission: Thum
     }
 }
 
+export function addLockedTitleDownvote(videoID: VideoID, title: string): void {
+    Config.local!.downvotedLocked ??= {};
+    const videoEntry = Config.local!.downvotedLocked[videoID] ??= {};
+    videoEntry.titles ??= [];
+
+    if (!videoEntry.titles.includes(title)) {
+        videoEntry.titles.push(title);
+        Config.forceLocalUpdate("downvotedLocked");
+    }
+}
+
+export function addLockedThumbnailDownvote(videoID: VideoID, submission: ThumbnailSubmission): void {
+    Config.local!.downvotedLocked ??= {};
+    const videoEntry = Config.local!.downvotedLocked[videoID] ??= {};
+    videoEntry.thumbnails ??= [];
+
+    let index = -1;
+    if (submission.original) {
+        index = videoEntry.thumbnails.findIndex((t) => t.original);
+    } else {
+        index = videoEntry.thumbnails.findIndex((t) => !t.original && t.timestamp === submission.timestamp);
+    }
+
+    if (index === -1) {
+        if (submission.original) {
+            videoEntry.thumbnails.push({ original: true });
+        } else {
+            videoEntry.thumbnails.push({ original: false, timestamp: submission.timestamp });
+        }
+        Config.forceLocalUpdate("downvotedLocked");
+    }
+}
+
 function cleanEmptyLockedEntry(videoID: VideoID): void {
     const entry = Config.local?.downvotedLocked?.[videoID];
     if (entry) {
@@ -105,3 +138,12 @@ function cleanEmptyLockedEntry(videoID: VideoID): void {
         }
     }
 }
+
+export const isTitleDownvoted = isLockedTitleDownvoted;
+export const isThumbnailDownvoted = isLockedThumbnailDownvoted;
+export const addTitleDownvote = addLockedTitleDownvote;
+export const addThumbnailDownvote = addLockedThumbnailDownvote;
+export const removeTitleDownvote = removeLockedTitleDownvote;
+export const removeThumbnailDownvote = removeLockedThumbnailDownvote;
+export const toggleTitleDownvote = toggleLockedTitleDownvote;
+export const toggleThumbnailDownvote = toggleLockedThumbnailDownvote;

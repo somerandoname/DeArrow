@@ -13,7 +13,7 @@ import { FormattedText } from "../popup/FormattedTextComponent";
 import { shouldStoreVotes } from "../utils/configUtils";
 
 import TrashIcon from "../svgIcons/trashIcon";
-import { isLockedThumbnailDownvoted, removeLockedThumbnailDownvote, toggleLockedThumbnailDownvote } from "../utils/lockedDownvotes";
+import { isThumbnailDownvoted, addThumbnailDownvote, removeThumbnailDownvote, toggleLockedThumbnailDownvote } from "../utils/lockedDownvotes";
 import { updateBrandingForVideo } from "../videoBranding/videoBranding";
 import { logError } from "../utils/logger";
 import { setupPreRenderedThumbnail } from "../thumbnails/thumbnailRenderer";
@@ -62,11 +62,9 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
     }
 
     React.useEffect(() => {
-        if (props.locked) {
-            const submission = createThumbnailSubmission();
-            if (submission) {
-                setDownvoted(isLockedThumbnailDownvoted(props.videoID, submission));
-            }
+        const submission = createThumbnailSubmission();
+        if (submission) {
+            setDownvoted(isThumbnailDownvoted(props.videoID, submission));
         }
     }, [props.videoID, props.time, props.type, props.locked]);
 
@@ -114,12 +112,14 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                         e.stopPropagation();
 
                                         const submission = createThumbnailSubmission();
-                                        if (props.locked && submission) {
-                                            if (isLockedThumbnailDownvoted(props.videoID, submission)) {
-                                                removeLockedThumbnailDownvote(props.videoID, submission);
-                                                setDownvoted(false);
+                                        if (submission && isThumbnailDownvoted(props.videoID, submission)) {
+                                            removeThumbnailDownvote(props.videoID, submission);
+                                            setDownvoted(false);
+                                            if (props.locked) {
                                                 updateBrandingForVideo(props.videoID).catch(logError);
+                                                return;
                                             }
+                                        } else if (props.locked) {
                                             return;
                                         }
 
@@ -199,17 +199,21 @@ export const ThumbnailSelectionComponent = (props: ThumbnailSelectionComponentPr
                                         e.stopPropagation();
 
                                         const submission = createThumbnailSubmission();
-                                        if (props.locked && submission) {
+                                        if (!submission) return;
+
+                                        if (props.locked) {
                                             const nowDownvoted = toggleLockedThumbnailDownvote(props.videoID, submission);
                                             setDownvoted(nowDownvoted);
                                             updateBrandingForVideo(props.videoID).catch(logError);
                                             return;
                                         }
 
+                                        addThumbnailDownvote(props.videoID, submission);
+                                        setDownvoted(true);
+
                                         const stopAnimation = AnimationUtils.applyLoadingAnimation(e.currentTarget, 0.3);
-                                        submitVideoBrandingAndHandleErrors(null, createThumbnailSubmission(), true, props.actAsVip!).then(() => {
+                                        submitVideoBrandingAndHandleErrors(null, submission, true, props.actAsVip!).then(() => {
                                             stopAnimation();
-                                            setDownvoted(true);
                                         });
 
                                         const unsubmitted = Config.local!.unsubmitted[props.videoID];

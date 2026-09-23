@@ -20,7 +20,7 @@ import { fetchVideoMetadata, isLiveSync } from "../maze-utils/src/metadataFetche
 import { getCurrentPageTitle } from "../maze-utils/src/elements";
 import { getPublicUserID, getCachedPublicUserID, isOwnSubmission } from "./utils/userUtils";
 import { formatJSErrorMessage, getLongErrorMessage } from "../maze-utils/src/formating";
-import { isLockedTitleDownvoted, isLockedThumbnailDownvoted } from "./utils/lockedDownvotes";
+import { isTitleDownvoted, isThumbnailDownvoted } from "./utils/lockedDownvotes";
 import { isUserSuppressed } from "./utils/suppressedUsers";
 
 interface VideoBrandingCacheRecord extends BrandingResult {
@@ -41,6 +41,7 @@ const cacheLimit = 10000;
 
 const activeRequests: Record<VideoID, [Promise<Record<VideoID, BrandingResult> | null>, Promise<Record<VideoID, BrandingResult> | null>]> = {};
 const activeThumbnailCacheRequests: Record<VideoID, ActiveThumbnailCacheRequestInfo> = {};
+
 
 export async function getVideoThumbnailIncludingUnsubmitted(videoID: VideoID, brandingLocation?: BrandingLocation,
         returnRandomTime = true): Promise<ThumbnailWithRandomTimeResult | null> {
@@ -72,11 +73,11 @@ export async function getVideoThumbnailIncludingUnsubmitted(videoID: VideoID, br
 
     let result: ThumbnailResult | undefined;
     if (useCrowdsourced) {
-        result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID));
+        result = brandingData?.thumbnails?.find((t) => !(!t.locked && t.votes < 0) && !isThumbnailDownvoted(videoID, t) && !isUserSuppressed(t.userID));
     } else {
         if (brandingData?.thumbnails) {
             for (const t of brandingData.thumbnails) {
-                if (!(!t.locked && t.votes < 0) && !(t.locked && isLockedThumbnailDownvoted(videoID, t)) && !isUserSuppressed(t.userID) && await isOwnSubmission(t.userID)) {
+                if (!(!t.locked && t.votes < 0) && !isThumbnailDownvoted(videoID, t) && !isUserSuppressed(t.userID) && await isOwnSubmission(t.userID)) {
                     result = t;
                     break;
                 }
@@ -188,11 +189,11 @@ export async function getVideoTitleIncludingUnsubmitted(videoID: VideoID, brandi
 
     let result: TitleResult | undefined;
     if (useCrowdsourced) {
-        result = brandingData?.titles?.find((t) => !(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID));
+        result = brandingData?.titles?.find((t) => !(!t.locked && t.votes < 0) && !isTitleDownvoted(videoID, t.title) && !isUserSuppressed(t.userID));
     } else {
         if (brandingData?.titles) {
             for (const t of brandingData.titles) {
-                if (!(!t.locked && t.votes < 0) && !(t.locked && isLockedTitleDownvoted(videoID, t.title)) && !isUserSuppressed(t.userID) && await isOwnSubmission(t.userID)) {
+                if (!(!t.locked && t.votes < 0) && !isTitleDownvoted(videoID, t.title) && !isUserSuppressed(t.userID) && await isOwnSubmission(t.userID)) {
                     result = t;
                     break;
                 }
@@ -597,6 +598,13 @@ function scheduleBackgroundRefetch(videoID: VideoID): void {
  */
 function optimisticBrandingCacheUpdate(videoID: VideoID, title: TitleSubmission | null,
         thumbnail: ThumbnailSubmission | null, downvote: boolean): void {
+    if (downvote) {
+        // Downvotes are tracked in Config.local (isTitleDownvoted / isThumbnailDownvoted)
+        // so downvoted items are immediately and permanently excluded from selection
+        // without mutating cached vote counts or triggering cache reconciliation refetches.
+        return;
+    }
+
     const existing = cache[videoID];
     if (!existing) {
         // No cache to update optimistically; the next fetch will populate it
@@ -604,57 +612,34 @@ function optimisticBrandingCacheUpdate(videoID: VideoID, title: TitleSubmission 
     }
 
     if (title) {
-        if (downvote) {
-            // Downvoting: decrement votes on the matching title
-            for (const t of existing.titles) {
-                if (t.title === title.title) {
-                    t.votes--;
-                    break;
-                }
-            }
-        } else {
-            // Submitting a new title: add it to the front with 1 vote
-            existing.titles.unshift({
-                title: title.title,
-                original: title.original,
-                votes: 1,
-                locked: false,
-                UUID: generateUserID() as BrandingUUID,
-                userID: getCachedPublicUserID() ?? undefined,
-            });
-        }
+        // Submitting a new title: add it to the front with 1 vote
+        existing.titles.unshift({
+            title: title.title,
+            original: title.original,
+            votes: 1,
+            locked: false,
+            UUID: generateUserID() as BrandingUUID,
+            userID: getCachedPublicUserID() ?? undefined,
+        });
     }
 
     if (thumbnail) {
-        if (downvote) {
-            // Downvoting: decrement votes on the matching thumbnail
-            for (const t of existing.thumbnails) {
-                if (thumbnail.original && t.original) {
-                    t.votes--;
-                    break;
-                } else if (!thumbnail.original && !t.original && t.timestamp === thumbnail.timestamp) {
-                    t.votes--;
-                    break;
-                }
-            }
+        // Submitting a new thumbnail
+        if (thumbnail.original) {
+            existing.thumbnails.unshift({
+                original: true,
+                votes: 1,
+                locked: false,
+                UUID: generateUserID() as BrandingUUID,
+            });
         } else {
-            // Submitting a new thumbnail
-            if (thumbnail.original) {
-                existing.thumbnails.unshift({
-                    original: true,
-                    votes: 1,
-                    locked: false,
-                    UUID: generateUserID() as BrandingUUID,
-                });
-            } else {
-                existing.thumbnails.unshift({
-                    original: false,
-                    timestamp: thumbnail.timestamp,
-                    votes: 1,
-                    locked: false,
-                    UUID: generateUserID() as BrandingUUID,
-                });
-            }
+            existing.thumbnails.unshift({
+                original: false,
+                timestamp: thumbnail.timestamp,
+                votes: 1,
+                locked: false,
+                UUID: generateUserID() as BrandingUUID,
+            });
         }
     }
 
